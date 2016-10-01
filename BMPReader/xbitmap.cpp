@@ -49,5 +49,5 @@ bool XBitmap::open(const char *filename)
 
     isOpen = true;
 
-    fclose(fp);
+    std::fclose(fp);
 }
