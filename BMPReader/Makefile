@@ -4,3 +4,4 @@ debug:
 	g++ -g xbitmap.cpp main.cpp -obmpreader
 clean:
 	rm bmpreader
+	rm -rf bmpreader.dSYM
