@@ -47,7 +47,22 @@ bool XBitmap::open(const char *filename)
     std::printf("palette:\t%d\n", DIBHeader.palette);
     std::printf("primary_color:\t%d\n", DIBHeader.primaryColorCount);
 
+    std::fseek(fp, fileHeader.offset, SEEK_SET);
+    int size = DIBHeader.width * DIBHeader.height;
+
+    buffer = new Color[size];
+    std::fread(buffer, sizeof(Color) * size, 1, fp);
+
     isOpen = true;
 
     std::fclose(fp);
+    return true;
+}
+
+Color XBitmap::getPixel(int x, int y) {
+    return buffer[y * DIBHeader.width + x];
+}
+
+XBitmap::~XBitmap() {
+    delete buffer;
 }

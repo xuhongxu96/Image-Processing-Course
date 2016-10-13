@@ -12,7 +12,7 @@ struct XBMPFileHeader {
 
 struct XBMPDIBHeader {
     unsigned int size;
-    int width, height;
+    unsigned int width, height;
     short plain;
     short bits;
     unsigned int compression;
@@ -22,17 +22,24 @@ struct XBMPDIBHeader {
     unsigned int primaryColorCount;
 };
 
+struct Color {
+    unsigned char B, G, R, A;
+};
+
 class XBitmap
 {
 public:
     XBitmap();
     XBitmap(const char *filename);
+    ~XBitmap();
 
     bool open(const char *filename);
+    Color getPixel(int x, int y);
 private:
     bool isOpen;
     XBMPFileHeader fileHeader;
     XBMPDIBHeader DIBHeader;
+    Color *buffer;
 };
 
 #endif // XBITMAP_H
