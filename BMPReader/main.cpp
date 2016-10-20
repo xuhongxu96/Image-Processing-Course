@@ -11,7 +11,7 @@ int main()
         scanf("%d %d", &x, &y);
         printf("Color of (%d, %d) is: ", x, y);
         Color cr = bmp.getPixel(x, y);
-        std::cout << (int)cr.R << " " << (int)cr.G << " " << (int)cr.B << std::endl;
+        std::cout << (int)cr.R << " " << (int)cr.G << " " << (int)cr.B << " " << (int)cr.A << std::endl;
     }
     return 0;
 }

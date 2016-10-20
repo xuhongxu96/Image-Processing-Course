@@ -50,8 +50,8 @@ bool XBitmap::open(const char *filename)
     std::fseek(fp, fileHeader.offset, SEEK_SET);
     int size = DIBHeader.width * DIBHeader.height;
 
-    buffer = new Color[size];
-    std::fread(buffer, sizeof(Color) * size, 1, fp);
+    buffer = new char[DIBHeader.bits * size];
+    std::fread(buffer, 1, DIBHeader.bits * size, fp);
 
     isOpen = true;
 
@@ -60,7 +60,19 @@ bool XBitmap::open(const char *filename)
 }
 
 Color XBitmap::getPixel(int x, int y) {
-    return buffer[y * DIBHeader.width + x];
+    Color cr;
+    if (DIBHeader.bits == 32) {
+        cr.B = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8];
+        cr.G = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 1];
+        cr.R = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 2];
+        cr.A = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 3];
+    } else if (DIBHeader.bits == 24) {
+        cr.B = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8];
+        cr.G = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 1];
+        cr.R = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 2];
+        cr.A = 255;
+    }
+    return cr;
 }
 
 XBitmap::~XBitmap() {

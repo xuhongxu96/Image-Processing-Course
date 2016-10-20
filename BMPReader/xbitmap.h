@@ -23,7 +23,7 @@ struct XBMPDIBHeader {
 };
 
 struct Color {
-    unsigned char B, G, R, A;
+    unsigned char R, G, B, A;
 };
 
 class XBitmap
@@ -39,7 +39,7 @@ private:
     bool isOpen;
     XBMPFileHeader fileHeader;
     XBMPDIBHeader DIBHeader;
-    Color *buffer;
+    char *buffer;
 };
 
 #endif // XBITMAP_H
