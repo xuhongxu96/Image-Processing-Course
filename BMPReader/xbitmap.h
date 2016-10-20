@@ -23,7 +23,38 @@ struct XBMPDIBHeader {
 };
 
 struct Color {
-    unsigned char R, G, B, A;
+    int R, G, B, A;
+    Color() {
+        R = G = B = A = 0;
+    }
+    Color(int r, int g, int b, int a) {
+        R = r;
+        G = g;
+        B = b;
+        A = a;
+    }
+    Color(Color &c) {
+        *this = c;
+    }
+    Color &operator =(const Color &c) {
+        R = c.R;
+        G = c.G;
+        B = c.B;
+        A = c.A;
+        return *this;
+    }
+
+    Color operator +(const Color &t) const {
+        return Color(R + t.R, G + t.G, B + t.B, A + t.A);
+    }
+
+    Color operator +=(const Color &t) {
+        return *this = Color(R + t.R, G + t.G, B + t.B, A + t.A);
+    }
+
+    Color operator /=(const int &n) {
+        return *this = Color(R / n, G / n, B / n, A / n);
+    }
 };
 
 class XBitmap
@@ -34,12 +65,14 @@ public:
     ~XBitmap();
 
     bool open(const char *filename);
-    Color getPixel(int x, int y);
+    Color getPixel(unsigned int x, unsigned int y, bool *in = nullptr);
+    void avgBlur(int len = 1);
+    void save(const char *filename);
 private:
     bool isOpen;
     XBMPFileHeader fileHeader;
     XBMPDIBHeader DIBHeader;
-    char *buffer;
+    unsigned char *buffer;
 };
 
 #endif // XBITMAP_H

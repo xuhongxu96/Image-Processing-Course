@@ -5,6 +5,8 @@
 int main()
 {
     XBitmap bmp("Sketch.bmp");
+    bmp.avgBlur(30);
+    bmp.save("Blur.bmp");
     while (1) {
         int x, y;
         printf("Input x y: \n");

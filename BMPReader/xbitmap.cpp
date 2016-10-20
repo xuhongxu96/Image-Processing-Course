@@ -1,5 +1,6 @@
 ﻿#include "xbitmap.h"
 #include <cstdio>
+#include <cstring>
 
 XBitmap::XBitmap() : isOpen(false)
 {
@@ -51,10 +52,9 @@ bool XBitmap::open(const char *filename)
     printf("primary_color:\t%d\n", DIBHeader.primaryColorCount);
 
     fseek(fp, fileHeader.offset, SEEK_SET);
-    int size = DIBHeader.width * DIBHeader.height;
 
-    buffer = new char[DIBHeader.bits * size];
-    fread(buffer, 1, DIBHeader.bits * size, fp);
+    buffer = new unsigned char[DIBHeader.dataSize];
+    fread(buffer, 1, DIBHeader.dataSize, fp);
 
     isOpen = true;
 
@@ -62,20 +62,78 @@ bool XBitmap::open(const char *filename)
     return true;
 }
 
-Color XBitmap::getPixel(int x, int y) {
+Color XBitmap::getPixel(unsigned int x, unsigned int y, bool *in) {
     Color cr;
+    if (in)
+        if (!(*in = (x < DIBHeader.width) && (y < DIBHeader.height)))
+            return cr;
+    cr.B = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8];
+    cr.G = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 1];
+    cr.R = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 2];
     if (DIBHeader.bits == 32) {
-        cr.B = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8];
-        cr.G = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 1];
-        cr.R = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 2];
         cr.A = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 3];
     } else if (DIBHeader.bits == 24) {
-        cr.B = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8];
-        cr.G = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 1];
-        cr.R = buffer[(y * DIBHeader.width + x) * DIBHeader.bits / 8 + 2];
         cr.A = 255;
     }
     return cr;
+}
+
+void XBitmap::avgBlur(int len)
+{
+    unsigned int width = DIBHeader.width, height = DIBHeader.height;
+    unsigned char *newbuf = new unsigned char[DIBHeader.dataSize];
+
+    for (unsigned int i = 0; i < width; ++i) {
+        for (unsigned int j = 0; j < height; ++j) {
+            int sz = 1;
+            Color t = getPixel(i, j);
+            Color t2 = getPixel(i, j);
+            for (int p = 1; p <= len; ++p) {
+                bool in = false;
+                t += getPixel(i + p, j, &in);
+                if (in) ++sz;
+                in = false;
+                t += getPixel(i - p, j, &in);
+                if (in) ++sz;
+                in = false;
+                t += getPixel(i, j + p, &in);
+                if (in) ++sz;
+                in = false;
+                t += getPixel(i, j - p, &in);
+                if (in) ++sz;
+            }
+            t /= sz;
+            /*
+            printf("%d %d\n", i, j);
+            printf("%d %d %d -> %d %d %d\n", t2.R, t2.G, t2.B, t.R, t.G, t.B);
+            */
+            newbuf[(j * DIBHeader.width + i) * DIBHeader.bits / 8] = t.B;
+            newbuf[(j * DIBHeader.width + i) * DIBHeader.bits / 8 + 1] = t.G;
+            newbuf[(j * DIBHeader.width + i) * DIBHeader.bits / 8 + 2] = t.R;
+            if (DIBHeader.bits == 32) {
+                newbuf[(j * DIBHeader.width + i) * DIBHeader.bits / 8 + 3] = t.A;
+            }
+        }
+    }
+    memcpy(buffer, newbuf, DIBHeader.dataSize);
+}
+
+void XBitmap::save(const char *filename)
+{
+    FILE *fp = fopen(filename, "w");
+    if (!fp) {
+        perror("Failed to open BMP file");
+        return;
+    }
+    fileHeader.offset = sizeof(fileHeader) + sizeof(DIBHeader);
+    fileHeader.fileSize = fileHeader.offset + DIBHeader.dataSize;
+    DIBHeader.size = sizeof(DIBHeader);
+
+    fwrite(&fileHeader, sizeof(XBMPFileHeader), 1, fp);
+    fwrite(&DIBHeader, sizeof(XBMPDIBHeader), 1, fp);
+
+    fwrite(buffer, 1, DIBHeader.dataSize, fp);
+    fclose(fp);
 }
 
 XBitmap::~XBitmap() {
