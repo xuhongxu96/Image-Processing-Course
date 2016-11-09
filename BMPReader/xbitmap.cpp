@@ -1,6 +1,10 @@
 ﻿#include "xbitmap.h"
+#include <algorithm>
 #include <cstdio>
+#include <vector>
 #include <cstring>
+
+#pragma pack(1)
 
 XBitmap::XBitmap() : isOpen(false)
 {
@@ -19,7 +23,7 @@ bool XBitmap::open(const char *filename)
     }
     isOpen = false;
 
-    FILE *fp = fopen(filename, "r");
+    FILE *fp = fopen(filename, "rb");
     if (!fp) {
         perror("Failed to open BMP file");
         return false;
@@ -50,8 +54,6 @@ bool XBitmap::open(const char *filename)
     printf("DPI:\t\t%d, %d\n", DIBHeader.dpiX, DIBHeader.dpiY);
     printf("palette:\t%d\n", DIBHeader.palette);
     printf("primary_color:\t%d\n", DIBHeader.primaryColorCount);
-
-    fseek(fp, fileHeader.offset, SEEK_SET);
 
     buffer = new unsigned char[DIBHeader.dataSize];
     fread(buffer, 1, DIBHeader.dataSize, fp);
@@ -87,7 +89,6 @@ void XBitmap::avgBlur(int len)
         for (unsigned int j = 0; j < height; ++j) {
             int sz = 1;
             Color t = getPixel(i, j);
-            Color t2 = getPixel(i, j);
             for (int p = 1; p <= len; ++p) {
                 bool in = false;
                 t += getPixel(i + p, j, &in);
@@ -103,10 +104,54 @@ void XBitmap::avgBlur(int len)
                 if (in) ++sz;
             }
             t /= sz;
-            /*
-            printf("%d %d\n", i, j);
-            printf("%d %d %d -> %d %d %d\n", t2.R, t2.G, t2.B, t.R, t.G, t.B);
-            */
+            newbuf[(j * DIBHeader.width + i) * DIBHeader.bits / 8] = t.B;
+            newbuf[(j * DIBHeader.width + i) * DIBHeader.bits / 8 + 1] = t.G;
+            newbuf[(j * DIBHeader.width + i) * DIBHeader.bits / 8 + 2] = t.R;
+            if (DIBHeader.bits == 32) {
+                newbuf[(j * DIBHeader.width + i) * DIBHeader.bits / 8 + 3] = t.A;
+            }
+        }
+    }
+    memcpy(buffer, newbuf, DIBHeader.dataSize);
+}
+
+
+void XBitmap::midBlur(int len)
+{
+    unsigned int width = DIBHeader.width, height = DIBHeader.height;
+    unsigned char *newbuf = new unsigned char[DIBHeader.dataSize];
+
+    std::vector<Color> colors;
+
+    for (unsigned int i = 0; i < width; ++i) {
+        for (unsigned int j = 0; j < height; ++j) {
+            Color t = getPixel(i, j);
+            colors.clear();
+            colors.push_back(t);
+            for (int p = 1; p <= len; ++p) {
+                bool in = false;
+                t = getPixel(i + p, j, &in);
+                if (in) {
+                    colors.push_back(t);
+                }
+                in = false;
+                t = getPixel(i - p, j, &in);
+                if (in) {
+                    colors.push_back(t);
+                }
+                in = false;
+                t = getPixel(i, j + p, &in);
+                if (in) {
+                    colors.push_back(t);
+                }
+                in = false;
+                t = getPixel(i, j - p, &in);
+                if (in) {
+                    colors.push_back(t);
+                }
+            }
+            std::sort(colors.begin(), colors.end(), Color::CMP());
+            t = colors[colors.size() / 2];
             newbuf[(j * DIBHeader.width + i) * DIBHeader.bits / 8] = t.B;
             newbuf[(j * DIBHeader.width + i) * DIBHeader.bits / 8 + 1] = t.G;
             newbuf[(j * DIBHeader.width + i) * DIBHeader.bits / 8 + 2] = t.R;
@@ -120,7 +165,7 @@ void XBitmap::avgBlur(int len)
 
 void XBitmap::save(const char *filename)
 {
-    FILE *fp = fopen(filename, "w");
+    FILE *fp = fopen(filename, "wb");
     if (!fp) {
         perror("Failed to open BMP file");
         return;

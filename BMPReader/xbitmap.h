@@ -1,7 +1,7 @@
 ﻿#ifndef XBITMAP_H
 #define XBITMAP_H
 
-#pragma pack(2)
+#pragma pack(1)
 
 struct XBMPFileHeader {
     char bm[2];
@@ -22,19 +22,20 @@ struct XBMPDIBHeader {
     unsigned int primaryColorCount;
 };
 
-struct Color {
+class Color {
+public:
     int R, G, B, A;
     Color() {
         R = G = B = A = 0;
+    }
+    Color(const Color &c) {
+        *this = c;
     }
     Color(int r, int g, int b, int a) {
         R = r;
         G = g;
         B = b;
         A = a;
-    }
-    Color(Color &c) {
-        *this = c;
     }
     Color &operator =(const Color &c) {
         R = c.R;
@@ -55,6 +56,13 @@ struct Color {
     Color operator /=(const int &n) {
         return *this = Color(R / n, G / n, B / n, A / n);
     }
+
+    class CMP {
+    public:
+        bool operator ()(Color &a, Color &b) {
+            return a.R + a.G + a.B < b.R + b.G + b.B;
+        }
+    };
 };
 
 class XBitmap
@@ -67,6 +75,7 @@ public:
     bool open(const char *filename);
     Color getPixel(unsigned int x, unsigned int y, bool *in = nullptr);
     void avgBlur(int len = 1);
+    void midBlur(int len = 1);
     void save(const char *filename);
 private:
     bool isOpen;
